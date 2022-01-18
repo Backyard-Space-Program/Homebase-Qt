@@ -60,9 +60,12 @@ def radio_timeout(timeout):
     radio_serial.timeout = timeout
 
 def radio_recv():
+    if radio_serial == None:
+        logger.error("Tried reading from radio while radio is closed")
+        return None
     return radio_serial.readline()
 
 def radio_send(type_, *args):
     if radio_serial == None:
-        logger.error("Tried sending while radio is closed")
+        logger.error("Tried sending to radio while radio is closed")
         return None

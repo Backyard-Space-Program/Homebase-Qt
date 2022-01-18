@@ -5,26 +5,25 @@ import time
 __version__ = "0.0.1"
 
 try:
-    from PyQt5 import QtWidgets,QtGui,QtCore
+    from PyQt5 import QtWidgets, QtGui, QtCore
+    import pyqtgraph as pyg
     import loguru
-except ModuleNotFoundError:
+except ImportError:
     try:
         import pip
-    except ModuleNotFoundError:
-        raise ModuleNotFoundError("Plz install pip and re-run script")
+    except ImportError:
+        raise ImportError("Plz install pip and re-run script")
         exit(2)
     if "--no-install" in sys.argv:
-        raise ModuleNotFoundError("Plz install pip and re-run script")
+        print("No u")
         exit(2)
     old_argv = sys.argv
-    sys.argv = ["pip", "install", "pyqt5", "loguru"]
+    sys.argv = ["pip", "install", "pyqt5", "loguru", "pyqtgraph"]
     pip.main()
     sys.argv = old_argv
     del pip, old_argv
-    try:
-        loguru
-    except:
-        import loguru
+    print("Packages installed, please re-run")
+    exit(0)
 
 logger = loguru.logger
 
@@ -74,8 +73,6 @@ class MainWindow(QtWidgets.QWidget):
         
         self.setStyleSheet("background-color: #323232;");
 
-        # self.setWindowIcon(QtGui.QIcon("icon.png"))
-
         self.video_rect = QtCore.QRect(self.x // 4, self.y // 4, self.x // 2, self.y // 2)
 
         self.button = Button(self, 0, 0, "reee", do_nothing)
@@ -103,28 +100,27 @@ class MainWindow(QtWidgets.QWidget):
         self.move(frameGm.topLeft())
 
     def paintEvent(self, event):
-        # print(dir(QtGui.QPainter))
         self.painter = QtGui.QPainter(self)
         self.painter.fillRect(self.video_rect, QtGui.QColor("green"))
         self.painter.end()
-        # draw video rectangle
-        # self.painter = QtGui.QPainter(self)
-        # self.brush = QtGui.QBrush(QtGui.QColor("green"))
-        # self.painter.setBrush(self.brush)
-        # self.painter.drawRect(self.video_rect)
 
-
+@logger.catch
 def main():
     logger.info("Starting Homebase version " + __version__)
+
     app = QtWidgets.QApplication(sys.argv)
+    app.setWindowIcon(QtGui.QIcon("icon.png"))
+    app.setApplicationDisplayName("Homebase")
+    app.aboutQt()
+
     screen_rect = app.desktop().screenGeometry()
     width, height = screen_rect.width(), screen_rect.height()
-
     logger.info("screen width/height: " + str(width) + "," + str(height))
+    
     if sys.platform == "darwin":
         height -= 53
-    mainWindow = MainWindow(width, height, "Homebase")
     
+    mainWindow = MainWindow(width, height, "Homebase")
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
