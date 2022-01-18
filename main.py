@@ -49,20 +49,41 @@ class Button:
         self.button.hide()
 
 class Label:
-    def __init__(self, root, x, y, text):
+    def __init__(self, root, x, y, text, center = True):
         self.root = root
+        self.label = QtWidgets.QLabel(self.root)
+        self.label.setText(text)
+        if not not center:
+            self.x = x - (self.label.size().width() // 2)
+            self.y = y - (self.label.size().height() // 2)
+        else:
+            self.x = x
+            self.y = y
+        self.text = text
+        self.center = center
+        self.label.move(self.x, self.y)
+        
         self.x = x
         self.y = y
-        self.text = text
-        self.label = QtWidgets.QLabel(self.root)
-        self.label.setText(self.text)
-        self.label.move(self.x, self.y)
 
     def show(self):
         self.label.show()
 
     def hide(self):
         self.label.hide()
+
+    def move(self, x, y):
+        if not not self.center:
+            self.x = x - (self.label.size().width() // 2)
+            self.y = y - (self.label.size().height() // 2)
+        else:
+            self.x = x
+            self.y = y
+        self.label.move(self.x, self.y)
+        self.root.update()
+        
+        self.x = x
+        self.y = y
 
 class MainWindow(QtWidgets.QWidget):
     def __init__(self, x, y, title):
@@ -71,20 +92,24 @@ class MainWindow(QtWidgets.QWidget):
         self.y = y
         self.windowTitle = title
         
-        self.setStyleSheet("background-color: #323232;");
+        self.setStyleSheet("background-color: #323232;")
 
-        self.video_rect = QtCore.QRect(self.x // 4, self.y // 4, self.x // 2, self.y // 2)
+        video_rect_aspect = 16/9
+        video_rect_height = round(self.y * 2/3)
+        video_rect_width  = round(video_rect_height * video_rect_aspect)
 
-        self.button = Button(self, 0, 0, "reee", do_nothing)
-        self.button.show()
+        # logger.info(video_rect_height)
+        # logger.info(video_rect_width)
 
-        self.label = Label(self, 100, 100, "reee?")
-        self.label.show()
+        # x, y, width, height
+        self.video_rect = QtCore.QRect((self.x // 2) - (video_rect_width // 2), (self.y - video_rect_height), video_rect_width, video_rect_height)
+        self.video_rect_text = Label(self, (self.x // 2), (self.y - video_rect_height), "Put Video Here!")
+        self.video_rect_text.show()
 
         self.initUI()
 
     def initUI(self):
-
+        logger.info("Starting UI")
         # self.resize(self.x, self.y)
         self.setFixedSize(self.x, self.y)
         self.setWindowTitle(self.windowTitle)
@@ -101,7 +126,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def paintEvent(self, event):
         self.painter = QtGui.QPainter(self)
-        self.painter.fillRect(self.video_rect, QtGui.QColor("green"))
+        self.painter.fillRect(self.video_rect, QtGui.QColor("#4d4d4d"))
         self.painter.end()
 
 @logger.catch
@@ -111,11 +136,10 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon("icon.png"))
     app.setApplicationDisplayName("Homebase")
-    app.aboutQt()
 
     screen_rect = app.desktop().screenGeometry()
     width, height = screen_rect.width(), screen_rect.height()
-    logger.info("screen width/height: " + str(width) + "," + str(height))
+    logger.info("Screen width/height: " + str(width) + "," + str(height))
     
     if sys.platform == "darwin":
         height -= 53
