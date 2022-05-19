@@ -2,6 +2,8 @@ import sys
 import time
 # import modules.thread
 
+import modules.gui as gui
+
 __version__ = "0.0.1"
 
 try:
@@ -49,19 +51,28 @@ class Button:
         self.button.hide()
 
 class Label:
-    def __init__(self, root, x, y, text, center = True):
+    def __init__(self, root, x, y, text, centerx = True, centery = True, styleSheet = None):
         self.root = root
         self.label = QtWidgets.QLabel(self.root)
         self.label.setText(text)
-        if not not center:
+        if centerx:
             self.x = x - (self.label.size().width() // 2)
-            self.y = y - (self.label.size().height() // 2)
         else:
             self.x = x
+        if centery:
+            self.y = y - (self.label.size().height() // 2)
+        else:
             self.y = y
         self.text = text
-        self.center = center
+        self.centerx = centerx
+        self.centery = centery
         self.label.move(self.x, self.y)
+
+        if styleSheet:
+            self.label.setStyleSheet(styleSheet)
+            self.styleSheet = styleSheet
+        else:
+            self.styleSheet = None
         
         self.x = x
         self.y = y
@@ -73,11 +84,13 @@ class Label:
         self.label.hide()
 
     def move(self, x, y):
-        if not not self.center:
+        if self.centerx:
             self.x = x - (self.label.size().width() // 2)
-            self.y = y - (self.label.size().height() // 2)
         else:
             self.x = x
+        if self.centery:
+            self.y = y - (self.label.size().height() // 2)
+        else:
             self.y = y
         self.label.move(self.x, self.y)
         self.root.update()
@@ -103,7 +116,8 @@ class MainWindow(QtWidgets.QWidget):
 
         # x, y, width, height
         self.video_rect = QtCore.QRect((self.x // 2) - (video_rect_width // 2), (self.y - video_rect_height), video_rect_width, video_rect_height)
-        self.video_rect_text = Label(self, (self.x // 2), (self.y - video_rect_height), "Put Video Here!")
+        self.video_rect_text = Label(self, (self.x // 2), (self.y - video_rect_height), "Put Video Here!", centery = False,
+                styleSheet = "color: white;")
         self.video_rect_text.show()
 
         self.initUI()
@@ -128,6 +142,9 @@ class MainWindow(QtWidgets.QWidget):
         self.painter = QtGui.QPainter(self)
         self.painter.fillRect(self.video_rect, QtGui.QColor("#4d4d4d"))
         self.painter.end()
+
+    # def closeEvent(self, event):
+        
 
 @logger.catch
 def main():
