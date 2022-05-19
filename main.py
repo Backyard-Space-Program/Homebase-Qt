@@ -18,7 +18,7 @@ except ImportError:
         print("No u")
         exit(2)
     old_argv = sys.argv
-    sys.argv = ["pip", "install", "pyqt5", "loguru", "pyqtgraph"]
+    sys.argv = ["pip", "install", "pyqt5", "loguru", "pyqtgraph", "pyserial"]
     pip.main()
     sys.argv = old_argv
     del pip, old_argv
