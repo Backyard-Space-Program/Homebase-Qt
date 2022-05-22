@@ -1,5 +1,6 @@
 from .radio import Recipient, RadioTypes
 import time
+from loguru import logger
 
 def checksum(string): # taken from https://en.wikipedia.org/wiki/NMEA_0183
     """
@@ -24,6 +25,7 @@ def checksum(string): # taken from https://en.wikipedia.org/wiki/NMEA_0183
                 crc = crc << 1
     return crc & 0xffff
 
+""" # for reference
 def radio_send_packet(type_, *args, broadcast = False, recipient = None):
     # 37 is % in ascii
     if not broadcast:
@@ -66,6 +68,8 @@ def radio_recv_packet():
 
     # parse args
 
+"""
+
 class Packet():
     def __init__(self, sender, recipient, type_, data, checksum = b"", time_ = 0):
         self.sender = sender
@@ -96,5 +100,61 @@ class Packet():
 
         return bytes(packet)
 
-    def decode(self, string):
-        pass
+    def decode(self, string, log_false_rx = True):
+        if isinstance(string, str):
+            string = string.encode()
+
+        if not (string.startswith(b"%%%") and string.endswith(b"%%%")):
+            logger.warning("Recieved potential false-rx")
+            if log_errors:
+                with open("errors.log", "ab") as f:
+                    f.write(str(datetime.fromtimestamp(int(time.time()))).encode() + b": " + string + b"\n")
+            return
+
+        if not self.check_format(string):
+            logger.warning("Recieved bad format packet")
+            if log_errors:
+                with open("errors.log", "ab") as f:
+                    f.write(str(datetime.fromtimestamp(int(time.time()))).encode() + b": " + string + b"\n")
+            return
+
+        if not self.check_checksum(string):
+            logger.warning("Recieved bad checksum in packet")
+            if log_errors:
+                with open("errors.log", "ab") as f:
+                    f.write(str(datetime.fromtimestamp(int(time.time()))).encode() + b": " + string + b"\n")
+            return
+
+        # all checks done
+
+        self.sender = Recipient(string[3])
+        self.recipient = Recipient(string[5])
+        self.type = RadioTypes(string[7])
+        datalength = int.from_bytes(string[9:11], "little")
+        self.data = string[12:datalength + 12]
+        self.checksum = checksum(data)
+        self.time = int(time.time())
+
+    def check_format(self, string):
+        if isinstance(string, str):
+            string = string.encode()
+
+        if string[4] != ord(":"):
+            return False
+        if string[6] != ord(";") or string[8] != ord(";") or string[11] != ord(";"):
+            return False
+        
+        return True
+
+    def check_checksum(self, string):
+        if isinstance(string, str):
+            string = string.encode()
+
+        datalength = int.from_bytes(string[9:11], "little")
+        if datalength > 1024:
+            return False
+
+        data = string[12:datalength + 12]
+        old_checksum = int.from_bytes(string[datalength + 13:datalength + 15], "little")
+        
+        return checksum(data) == old_checksum
