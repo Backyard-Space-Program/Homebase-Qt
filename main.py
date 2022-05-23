@@ -3,6 +3,8 @@ import time
 # import modules.thread
 
 import modules.gui as gui
+import modules.radio as radio
+import modules.packet as packet
 
 __version__ = "0.0.1"
 
@@ -143,8 +145,13 @@ class MainWindow(QtWidgets.QWidget):
         self.painter.fillRect(self.video_rect, QtGui.QColor("#4d4d4d"))
         self.painter.end()
 
-    # def closeEvent(self, event):
-        
+    def closeEvent(self, event):
+        if radio.radio_is_open():
+            logger.info("Closing radio")
+            radio.radio_close_serial()
+
+        logger.info("Closing UI")
+        event.accept()
 
 @logger.catch
 def main():

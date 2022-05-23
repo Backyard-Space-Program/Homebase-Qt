@@ -1,6 +1,15 @@
-from .radio import Recipient, RadioTypes
+# from .radio import Recipient, RadioTypes
 import time
 from loguru import logger
+import sys
+
+try:
+    radio
+    Recipient
+    RadioTypes
+except NameError:
+    if not "modules.radio" in sys.modules:
+        from modules.radio import Recipient, RadioTypes
 
 def checksum(string): # taken from https://en.wikipedia.org/wiki/NMEA_0183
     """
@@ -71,7 +80,7 @@ def radio_recv_packet():
 """
 
 class Packet():
-    def __init__(self, sender, recipient, type_, data, checksum = b"", time_ = 0):
+    def __init__(self, sender = None, recipient = None, type_ = None, data = None, checksum = 0, time_ = 0):
         self.sender = sender
         self.recipient = recipient
         self.type = type_
@@ -81,6 +90,10 @@ class Packet():
         self.broadcast = True if self.recipient == Recipient.GROUND else False
 
     def encode(self):
+        # if we havent inputted any data
+        if self.sender == None or self.recipient == None or self.type == None or self.data == None:
+            return False
+
         # 37 is % in ascii
         if not self.broadcast:
             packet = bytearray((37, 37, 37, Recipient.GROUND.value, ord(":"), self.recipient.value, ord(";")))
@@ -96,6 +109,7 @@ class Packet():
 
         packet += checksum(self.data).to_bytes(2, "little") + b"%%%"
 
+        self.checksum = checksum(self.data)
         self.time = int(time.time())
 
         return bytes(packet)
@@ -132,7 +146,7 @@ class Packet():
         self.type = RadioTypes(string[7])
         datalength = int.from_bytes(string[9:11], "little")
         self.data = string[12:datalength + 12]
-        self.checksum = checksum(data)
+        self.checksum = checksum(self.data)
         self.time = int(time.time())
 
     def check_format(self, string):
@@ -158,3 +172,64 @@ class Packet():
         old_checksum = int.from_bytes(string[datalength + 13:datalength + 15], "little")
         
         return checksum(data) == old_checksum
+
+
+
+def packet_encode():
+    try:
+        packet = Packet(Recipient.GROUND, Recipient.BROADCAST, RadioTypes.FLIGHT_TELEM, b"hi")
+        packet.encode()
+    except Exception as e:
+        logger.debug(e)
+        return False
+    return True
+
+def packet_decode():
+    try:
+        packet = Packet()
+        packet.decode(b'%%%\x02:\x00;\x00;\x02\x00;hi;\x03b%%%')
+        if packet.data != b"hi":
+            return False
+        if packet.sender != Recipient.GROUND:
+            return False
+        if packet.recipient != Recipient.BROADCAST:
+            return False
+        if packet.type != RadioTypes.FLIGHT_TELEM:
+            return False
+    except Exception as e:
+        return False
+    return True
+
+def packet_checksum():
+    try:
+        packet = Packet()
+        return packet.check_checksum(b'%%%\x02:\x00;\x00;\x02\x00;hi;\x03b%%%')
+    except Exception as e:
+        return False
+
+def bad_checksum():
+    try:
+        packet = Packet()
+        return not packet.check_checksum(b'%%%\x02:\x00;\x00;\x02\x00;hi;\x03a%%%')
+    except Exception as e:
+        return False
+
+tests = {
+        "Packet Encoding ": packet_encode,
+        "Packet Decoding ": packet_decode,
+        "Packet Checksum ": packet_checksum,
+        "Bad Checksum    ": bad_checksum
+}
+
+def run_tests():
+    print("Starting tests")
+    failed_tests = 0
+    for name, func in tests.items():
+        print(name, end=": ")
+        res = func()
+        print("\33[42mPASS\33[0m" if res else "\33[41mFAIL\33[0m")
+        if not res: failed_tests += 1
+    if failed_tests:
+        print(f"Failed tests: {failed_tests} / {len(tests)}")
+    else:
+        print("Passed all tests")
