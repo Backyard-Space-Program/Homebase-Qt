@@ -2,6 +2,7 @@
 import time
 from loguru import logger
 import sys
+from .config import config
 
 try:
     radio
@@ -120,24 +121,24 @@ class Packet():
 
         if not (string.startswith(b"%%%") and string.endswith(b"%%%")):
             logger.warning("Recieved potential false-rx")
-            if log_errors:
+            if config.log_errors:
                 with open("errors.log", "ab") as f:
-                    f.write(str(datetime.fromtimestamp(int(time.time()))).encode() + b": " + string + b"\n")
-            return
+                    f.write(str(datetime.fromtimestamp(int(time.time()))).encode() + b" (false-rx): " + string + b"\n")
+            return None
 
         if not self.check_format(string):
             logger.warning("Recieved bad format packet")
-            if log_errors:
+            if config.log_errors:
                 with open("errors.log", "ab") as f:
-                    f.write(str(datetime.fromtimestamp(int(time.time()))).encode() + b": " + string + b"\n")
-            return
+                    f.write(str(datetime.fromtimestamp(int(time.time()))).encode() + b" (bad format): " + string + b"\n")
+            return None
 
         if not self.check_checksum(string):
             logger.warning("Recieved bad checksum in packet")
-            if log_errors:
+            if config.log_errors:
                 with open("errors.log", "ab") as f:
-                    f.write(str(datetime.fromtimestamp(int(time.time()))).encode() + b": " + string + b"\n")
-            return
+                    f.write(str(datetime.fromtimestamp(int(time.time()))).encode() + b" (bad checksum): " + string + b"\n")
+            return None
 
         # all checks done
 

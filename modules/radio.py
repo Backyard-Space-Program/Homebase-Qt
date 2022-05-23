@@ -82,6 +82,7 @@ def radio_timeout(timeout):
     if radio_serial == None:
         logger.error("Tried changing timeout while radio is closed")
         return None
+    logger.info(f"Changing radio timeout to {timeout} s")
     radio_serial.timeout = timeout
 
 def radio_recv_raw():
@@ -98,44 +99,20 @@ def radio_send_raw(*args):
         radio_serial.write(bytes(i, "UTF-8"))
     radio_serial.flush() # :flushed:
     
-def radio_send_packet(type_, *args, broadcast = False, recipient = None):
-    # 37 is % in ascii
-    if not broadcast:
-        packet = bytearray((37, 37, 37, Recipient.GROUND.value, ord(":"), recipient.value, ord(";")))
-    else:
-        packet = bytearray((37, 37, 37, Recipient.GROUND.value, ord(":"), Recipient.BROADCAST.value, ord(";")))
-
-    # combine args
-    data = b""
+def radio_send_packet(type_, *args, broadcast = False, recipient = None, spacer = b""):
+    to_send = b""
     for i in args:
         if isinstance(i, str):
-            data += bytes(i, "UTF-8")
-        elif isinstance(i, int):
-            data += i.to_bytes(2, "little")
-        elif isinstance(i, float): # hopefully never use this
-            data += struct.pack("f", i)
+            to_send += i.encode() + spacer
         else:
-            data += i
+            to_send += i + spacer
 
-    packet.append(type_.value)
-    packet.append(ord(";"))
-    packet += len(data).to_bytes(2, "little")
-    packet.append(ord(";"))
-    packet += data
-    packet.append(ord(";"))
+    if not broadcast and not recipient:
+        return False
 
-    packet += checksum(data).to_bytes(2, "little") + b"%%%"
-
-    return bytes(packet)
-    # radio_send_raw(packet)
-    # return True
+    packet = Packet(Recipient.GROUND, recipient, type_, to_send)
+    radio_send_raw(packet.encode())
+    return True
 
 def radio_recv_packet():
-    packet = radio_recv_raw()
-
-    if not (packet.startswith(b"%%%") and packet.endswith(b"%%%")):
-        logger.warning("Recieved potental false-rx")
-        with open("false-rx.log", "ab") as f:
-            f.write(packet + b"\n")
-
-    # parse args
+    return Packet().decode(radio_recv_raw())
